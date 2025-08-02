@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Good Thymes Virtual Grocery</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.11.5/dist/css/layui.min.css">
+
+</head>
+
+<body>
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-row">
+        <div class="layui-col-md8 layui-col-md-offset2">
+            <table class="layui-hide" id="ID-table-demo-data" lay-filter="test"></table>
+        </div>
+    </div>
+
+
+</div>
+
+<script type="text/html" id="barDemo">
+    <div class="layui-clear-space">
+        <a class="layui-btn layui-btn-xs" lay-event="play">播放</a>
+
+    </div>
+</script>
+<script src="https://cdn.jsdelivr.net/npm/layui@2.11.5/dist/layui.min.js"></script>
+
+<script>
+    const serverURL = 'ws://127.0.0.1:3800/tasks';
+    const socket = new WebSocket(serverURL);
+
+
+    layui.use(function () {
+        var table = layui.table;
+        socket.onopen = logOpenToConsole;
+        socket.onclose = logCloseToConsole;
+        socket.onmessage = readAndDisplayTask;
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+        // 已知数据渲染
+        var inst = table.render({
+            id: 'ID-table-demo-data',
+            elem: '#ID-table-demo-data',
+            cols: [
+                [
+                    {field: 'id', title: 'ID', width: '5%'},
+                    {field: 'name', title: '用户', width: '70%'},
+
+                    {title: '操作', toolbar: '#barDemo', width: '25%'}
+                ]
+            ],
+            data: [],
+            //skin: 'line', // 表格风格
+            //even: true,
+            page: false, // 是否显示分页
+            /* limits: [5, 10, 15],
+             limit: 5 // 每页默认显示的数量*/
+        });
+
+        table.on('tool(test)', function (obj) {
+            var data = obj.data;
+            //console.log(obj)
+            if (obj.event === 'play') {
+                debugger
+                console.log(data);
+                window.open("/video/" + data.id, '_blank');
+            }
+        });
+
+        function readAndDisplayTask(event) {
+            //  clearTable();
+            let task = JSON.parse(event.data);
+            logTaskToConsole(task);
+            // addTaskToTable(task);
+
+            table.reloadData('ID-table-demo-data', {
+                data: task
+            });
+
+        }
+
+        function logTaskToConsole(task) {
+            console.log(`Received ` + JSON.stringify(task));
+        }
+
+        function logCloseToConsole(event) {
+            console.log("Web socket connection closed" + event.reason);
+        }
+
+        function logOpenToConsole() {
+            console.log("Web socket connection opened");
+        }
+
+        function tableBody() {
+            return document.getElementById("tasksTableBody");
+        }
+
+        function clearTable() {
+            tableBody().innerHTML = "";
+        }
+
+        function addTaskToTable(tasks) {
+            tasks.forEach(task =>
+                tableBody().appendChild(taskRow(task))
+            );
+        }
+
+
+        function taskRow(task) {
+
+            return tr([
+                td(task.name),
+                td(task.url),
+
+            ])
+        }
+
+
+        function tr(children) {
+            const node = document.createElement("tr");
+            children.forEach(child => node.appendChild(child));
+            return node;
+        }
+
+
+        function td(text) {
+            const node = document.createElement("td");
+            node.appendChild(document.createTextNode(text));
+            return node;
+        }
+    });
+</script>
+
+</body>
+
+</html>

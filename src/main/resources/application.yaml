@@ -1,0 +1,9 @@
+ktor:
+  application:
+    modules:
+      - cn.com.lushunming.ApplicationKt.module
+  deployment:
+    port: 3800
+    watch:
+      - classes
+      - resources
