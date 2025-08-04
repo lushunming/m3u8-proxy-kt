@@ -44,6 +44,8 @@ class ProxyServer {
         val channels = List(THREAD_NUM) { Channel<ByteArray>() }
         try {
             logger.info("--proxyMultiThread: THREAD_NUM: $THREAD_NUM")
+            logger.info("--proxyMultiThread: url: $url")
+            logger.info("--proxyMultiThread: headers: ${Gson().toJson(headers)}")
 
 
             var rangeHeader = call.request.headers[HttpHeaders.Range]

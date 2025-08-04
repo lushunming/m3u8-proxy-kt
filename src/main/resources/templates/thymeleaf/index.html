@@ -35,6 +35,7 @@
 
     layui.use(function () {
         var table = layui.table;
+        var layer = layui.layer;
         socket.onopen = logOpenToConsole;
         socket.onclose = logCloseToConsole;
         socket.onmessage = readAndDisplayTask;
@@ -48,7 +49,7 @@
             cols: [
                 [
                     {field: 'id', title: 'ID', width: '5%'},
-                    {field: 'name', title: '用户', width: '70%'},
+                    {field: 'name', title: '视频名称', width: '70%'},
 
                     {title: '操作', toolbar: '#barDemo', width: '25%'}
                 ]
@@ -67,7 +68,16 @@
             if (obj.event === 'play') {
                 debugger
                 console.log(data);
-                window.open("/video/" + data.id, '_blank');
+                // window.open("/video/" + data.id, '_blank');
+                layer.open({
+                    type: 2,
+                    area: ['680px', '520px'],
+                    content: "/video/" + data.id,
+                    fixed: false, // 不固定
+                    maxmin: true,
+                    shadeClose: true,
+
+                });
             }
         });
 

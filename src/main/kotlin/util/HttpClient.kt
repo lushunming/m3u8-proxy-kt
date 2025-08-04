@@ -1,13 +1,20 @@
 package cn.com.lushunming.util
 
 import io.ktor.client.*
+import io.ktor.client.engine.ProxyBuilder
 import io.ktor.client.engine.cio.*
+import io.ktor.client.engine.http
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.cio.Response
 
 object HttpClientUtil {
-    val client = HttpClient(CIO)
+    val client = HttpClient(CIO){
+
+            engine {
+             //   proxy = ProxyBuilder.http("http://127.0.0.1:1082/")
+            }
+    }
 
     /**
      * get请求
