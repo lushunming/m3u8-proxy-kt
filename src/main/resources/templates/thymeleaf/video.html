@@ -1,5 +1,5 @@
 <head>
-    <link href="https://unpkg.com/video.js@7.10.2/dist/video-js.min.css" rel="stylesheet" />
+    <link href="https://unpkg.com/video.js@7.10.2/dist/video-js.min.css" rel="stylesheet"/>
 
     <!-- 如果要支持IE8，请使用v7之前的video.js，并且引入下面这个js链接。-->
     <!-- <script src="https://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script> -->
@@ -14,8 +14,9 @@
         height="264"
         poster="http://vjs.zencdn.net/v/oceans.png"
         data-setup="{}"
+        autoplay
 >
-    <source th:src="${url}" type="video/mp4" />
+    <source th:src="${url}" th:type="${type}"/>
     <p class="vjs-no-js">
         如果想使用video.js，请确保浏览器可以运行JavaScript，并且支持
         <a href="https://videojs.com/html5-video-support/" target="_blank"
@@ -24,4 +25,5 @@
 </video>
 
 <script src="https://unpkg.com/video.js@7.10.2/dist/video.min.js"></script>
+<script src="https://unpkg.com/@videojs/http-streaming@3.17.2/dist/videojs-http-streaming.min.js"></script>
 </body>

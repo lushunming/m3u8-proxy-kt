@@ -41,7 +41,8 @@ dependencies {
     implementation("io.ktor:ktor-server-thymeleaf")
 
     implementation("io.ktor:ktor-client-core")
-    implementation("io.ktor:ktor-client-cio")
+    implementation("io.ktor:ktor-client-okhttp")
+    implementation("io.ktor:ktor-client-okhttp-jvm:3.2.2")
 
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
