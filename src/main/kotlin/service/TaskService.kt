@@ -1,20 +1,40 @@
 package cn.com.lushunming.service
 
 import model.Task
+import model.Tasks
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import service.DatabaseFactory
 
 class TaskService {
-    val tasks: MutableList<Task> = mutableListOf()
 
-    fun getTaskList(): MutableList<Task> {
-        return tasks;
+
+    suspend fun getTaskList(): List<Task> {
+        return DatabaseFactory.dbQuery {
+            Tasks.selectAll().map { toTask(it) }
+        }
     }
 
-    fun addTask(task: Task) {
-        tasks.add(task)
+
+    suspend fun addTask(task: Task) {
+        DatabaseFactory.dbQuery {
+            Tasks.insert {
+                it[Tasks.name] = task.name
+                it[Tasks.url] = task.url
+                it[Tasks.type] = task.type
+            }
+        }
     }
 
-    fun getTaskById(id: String?): Task? {
+    suspend fun getTaskById(id: Int): Task? {
 
-        return tasks.find { it.id == id }
+        return DatabaseFactory.dbQuery {
+            Tasks.selectAll().where { Tasks.id eq id }.map { toTask(it) }.singleOrNull()
+        }
     }
+
+    private fun toTask(row: ResultRow): Task = Task(
+        id = row[Tasks.id], name = row[Tasks.name], url = row[Tasks.url], type = row[Tasks.type]
+    )
 }

@@ -11,7 +11,7 @@ object HttpClientUtil {
 
         engine {
 
-         //   proxy = ProxyBuilder.socks(host = "127.0.0.1", port = 1080)
+        //    proxy = ProxyBuilder.http("http://127.0.0.1:1080" )
 
         }
     }

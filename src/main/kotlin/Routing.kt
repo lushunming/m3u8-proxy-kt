@@ -8,7 +8,6 @@ import cn.com.lushunming.util.Constant
 import cn.com.lushunming.util.Util
 import com.google.gson.Gson
 import io.ktor.http.*
-import io.ktor.http.ContentType.Application.OctetStream
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -46,7 +45,7 @@ fun Application.configureRouting() {
         }
         get("/video/{id}") {
             val id = call.parameters["id"]
-            val task = taskService.getTaskById(id)
+            val task = taskService.getTaskById(Integer.parseInt(id!!))
             call.respond(
                 ThymeleafContent(
                     "video", mapOf("url" to (task?.url ?: ""), "type" to (task?.type ?: "application/x-mpegURL"))
@@ -79,12 +78,9 @@ fun Application.configureRouting() {
 
             val url = call.parameters["path"] ?: ""
             val tsName = call.parameters["tsName"] ?: ""
+
             call.response.header(
-                HttpHeaders.ContentDisposition,
-                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, tsName).toString()
-            )
-            call.response.header(
-                HttpHeaders.ContentType, OctetStream.toString()
+                HttpHeaders.ContentType, "video/mp2t"
             )
             call.respondFile(File(Constant.downloadPath + File.separator + url + File.separator + tsName))
 
@@ -106,7 +102,7 @@ fun Application.configureRouting() {
                     )
                 }
             }
-            taskService.addTask(Task(index.incrementAndGet().toString(), download.list[0].filename, url, type))
+            taskService.addTask(Task(index.incrementAndGet(), download.list[0].filename, url, type))
             sessions = sessions.filter { it.isActive }.toMutableList()
             if (sessions.isNotEmpty()) {
                 for (session in sessions) {

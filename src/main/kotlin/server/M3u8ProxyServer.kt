@@ -24,15 +24,11 @@ class M3u8ProxyServer {
         //所在目录
         val dir = Constant.downloadPath + File.separator + Util.md5(url)
         try {
+
             call.response.header(
-                HttpHeaders.ContentDisposition,
-                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "local.m3u8")
-                    .toString()
+                HttpHeaders.ContentType, "application/vnd.apple.mpegurl"
             )
-            call.response.header(
-                HttpHeaders.ContentType, OctetStream.toString()
-            )
-            call.respondFile(File(dir), "local.m3u8")
+            call.respondFile(File(dir),"local.m3u8")
         } catch (e: Exception) {
             logger.info("error: ${e.message}")
             call.respondText("error: ${e.message}", ContentType.Text.Plain)
