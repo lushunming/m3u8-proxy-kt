@@ -1,28 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh">
+
 <head>
-    <link href="https://unpkg.com/video.js@7.10.2/dist/video-js.min.css" rel="stylesheet"/>
-
-    <!-- 如果要支持IE8，请使用v7之前的video.js，并且引入下面这个js链接。-->
-    <!-- <script src="https://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script> -->
+    <meta charset="utf-8">
+    <meta name=viewport
+          content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui">
+    <meta name="referrer" content="no-referrer">
+    <title>xgplayer</title>
+    <style type="text/css">
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: auto;
+            overflow: hidden;
+        }
+    </style>
 </head>
+
 <body>
-<video
-        id="my-player"
-        class="video-js"
-        controls
-        preload="auto"
-        width="640"
-        height="264"
-        poster="http://vjs.zencdn.net/v/oceans.png"
-        data-setup="{}"
+<div id="dplayer"></div>
+<script th:inline="javascript">
+    var url = [[${url}]];
 
->
-    <source th:src="${url}" th:type="${type}"/>
-    <p class="vjs-no-js">
-        如果想使用video.js，请确保浏览器可以运行JavaScript，并且支持
-        <a href="https://videojs.com/html5-video-support/" target="_blank"
-        >HTML5 video</a>
-    </p>
-</video>
-
-<script src="https://unpkg.com/video.js@7.10.2/dist/video.min.js"></script>
+    var type = [[${type}]]
+    console.log(url);
+</script>
+<script src="/static/xgplayer/index.js" charset="utf-8"></script>
+<script src="/static/xgplayer/xgplayer-hls.js" charset="utf-8"></script>
+<script src="/static/xgplayer/cssFullscreen.js" charset="utf-8"></script>
+<script src="/static/xgplayer/fullscreen.js"></script>
+<script>
+    var config = {
+        "id": "dplayer",
+        "url": url,
+        autoplay: true,
+        // "playsinline": true,
+        fitVideoSize: 'auto',
+        // download: true,
+        cssFullscreen: true,
+        // rotateFullscreen: true,
+        "whitelist": [
+            ""
+        ]
+    }
+    if (type.indexOf("mpegURL") > -1) {
+        config['hlsvod'] = {
+            loadTimeout: 10000,
+            preloadTime: 3600,
+            retryCount: 1,
+            retryDelay: 1000
+        }
+        let player = new HlsJsPlayer(config);
+    } else {
+        let player = new Player(config);
+    }
+</script>
 </body>
+
+</html>

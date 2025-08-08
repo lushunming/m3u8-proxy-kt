@@ -5,7 +5,7 @@
 <head>
     <title>Good Thymes Virtual Grocery</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/layui@2.11.5/dist/css/layui.min.css">
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
 
 </head>
 
@@ -54,7 +54,7 @@
 
     </div>
 </script>
-<script src="https://cdn.jsdelivr.net/npm/layui@2.11.5/dist/layui.min.js"></script>
+<script src="/static/layui/layui.js"></script>
 
 <script>
     const serverURL = 'ws://127.0.0.1:3800/tasks';
@@ -94,7 +94,7 @@
             var data = obj.data;
             //console.log(obj)
             if (obj.event === 'play') {
-                debugger
+
                 console.log(data);
                 // window.open("/video/" + data.id, '_blank');
                 layer.open({

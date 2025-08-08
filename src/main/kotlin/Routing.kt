@@ -1,5 +1,7 @@
 package cn.com.lushunming
 
+import cn.com.lushunming.model.AppConfig
+import cn.com.lushunming.model.Config
 import cn.com.lushunming.model.Downloads
 import cn.com.lushunming.server.M3u8ProxyServer
 import cn.com.lushunming.server.ProxyServer
@@ -20,6 +22,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import model.Task
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import startDownload
 import java.io.File
@@ -94,11 +99,15 @@ fun Application.configureRouting() {
             //M3U8开始下载
             if (download.list[0].url.contains("m3u8")) {
                 type = "application/x-mpegURL"
+                val dir = Constant.downloadPath + File.separator + Util.md5(download.list[0].url)
                 CoroutineScope(Dispatchers.IO).launch {
+                    File(dir).mkdirs()
+                    val headerFile = File(dir, "header.tmp")
+
+                    headerFile.writeText(Util.json(download.list[0].headers))
+
                     startDownload(
-                        Constant.downloadPath + File.separator + Util.md5(download.list[0].url),
-                        download.list[0].url,
-                        download.list[0].headers
+                        dir, download.list[0].url, download.list[0].headers
                     )
                 }
             }
@@ -112,6 +121,24 @@ fun Application.configureRouting() {
             }
             call.respondText(url)
         }
+
+        post("/config") {
+
+            val config = call.receive<AppConfig>()
+            val first = Config.selectAll().firstOrNull()
+            if (first == null) {
+                Config.insert {
+                    it[proxy] = config.proxy
+                }
+            } else {
+                Config.update({ Config.id.eq(first[Config.id]) }) {
+                    it[proxy] = config.proxy
+                }
+            }
+            call.respondText("保存成功")
+        }
+
+
 
         webSocket("/tasks") {
             sessions.add(this)

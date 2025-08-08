@@ -14,8 +14,7 @@ import java.io.File
 class M3u8ProxyServer {
 
     val logger = LoggerFactory.getLogger(M3u8ProxyServer::class.java)
-    val partSize = 1024 * 1024 // 1MB
-    val THREAD_NUM = 10
+
 
 
     suspend fun proxyAsyncM3u8(

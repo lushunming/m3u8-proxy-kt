@@ -86,7 +86,7 @@ class M3U8Downloader(private val outputDir: String) {
         }
     }
 
-    private val batchSize: Int = 5
+    private val batchSize: Int = Runtime.getRuntime().availableProcessors() * 2
     private val maxRetries: Int = 3
 
     suspend fun download(
@@ -115,6 +115,11 @@ class M3U8Downloader(private val outputDir: String) {
         while (retryCount < maxRetries && !success) {
             try {
                 val file = File(dir, "segment$index.ts")
+                if (file.exists()) {
+                    println("TS文件 segment$index.ts 已存在")
+                    success = true
+                    continue
+                }
                 val response = HttpClientUtil.get(url, headers)
                 file.outputStream().use { outputStream ->
                     outputStream.write(response.bodyAsBytes())
@@ -168,6 +173,7 @@ suspend fun startDownload(outputDir: String, m3u8Url: String, headers: Map<Strin
 
 
     val downloader = M3U8Downloader(outputDir)
+    File(outputDir, "header.tmp").writeText(Util.json(headers))
 
     try {
         // 解析M3U8

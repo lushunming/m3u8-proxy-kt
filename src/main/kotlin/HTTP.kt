@@ -3,14 +3,19 @@ package cn.com.lushunming
 import io.ktor.http.*
 import io.ktor.serialization.gson.*
 import io.ktor.server.application.*
+import io.ktor.server.http.content.staticFiles
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import java.io.File
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 fun Application.configureHTTP() {
+
+
     install(CORS) {
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
@@ -38,7 +43,9 @@ fun Application.configureHTTP() {
     routing {
         swaggerUI(path = "openapi")
     }
-
+    routing {
+        staticResources("/static", "static")
+    }
 }
 
 data class ThymeleafUser(val id: Int, val name: String)
