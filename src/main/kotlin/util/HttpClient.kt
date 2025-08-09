@@ -11,10 +11,16 @@ object HttpClientUtil {
 
         engine {
 
-        //    proxy = ProxyBuilder.http("http://127.0.0.1:1080" )
+            // proxy = ProxyBuilder.http("http://127.0.0.1:1080" )
 
         }
     }
+
+    fun setProxy(proxy: String?) {
+        if (proxy == null) return
+        client.engine.config.proxy = ProxyBuilder.http(proxy)
+    }
+    
 
     /**
      * get请求

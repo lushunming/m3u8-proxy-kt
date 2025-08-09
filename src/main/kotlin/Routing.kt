@@ -1,12 +1,13 @@
 package cn.com.lushunming
 
 import cn.com.lushunming.model.AppConfig
-import cn.com.lushunming.model.Config
 import cn.com.lushunming.model.Downloads
 import cn.com.lushunming.server.M3u8ProxyServer
 import cn.com.lushunming.server.ProxyServer
+import cn.com.lushunming.service.ConfigService
 import cn.com.lushunming.service.TaskService
 import cn.com.lushunming.util.Constant
+import cn.com.lushunming.util.HttpClientUtil.setProxy
 import cn.com.lushunming.util.Util
 import com.google.gson.Gson
 import io.ktor.http.*
@@ -22,9 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import model.Task
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
 import org.slf4j.LoggerFactory
 import startDownload
 import java.io.File
@@ -123,19 +121,24 @@ fun Application.configureRouting() {
         }
 
         post("/config") {
-
+            val configService = ConfigService()
             val config = call.receive<AppConfig>()
-            val first = Config.selectAll().firstOrNull()
-            if (first == null) {
-                Config.insert {
-                    it[proxy] = config.proxy
-                }
-            } else {
-                Config.update({ Config.id.eq(first[Config.id]) }) {
-                    it[proxy] = config.proxy
-                }
-            }
+            configService.saveConfig(config)
+
+            setProxy(config.proxy)
+
             call.respondText("保存成功")
+        }
+
+        get("/config") {
+
+            val configService = ConfigService()
+            val config = configService.getConfig()
+            call.respond(
+                ThymeleafContent(
+                    "config", mapOf("proxy" to config?.proxy)
+                )
+            )
         }
 
 

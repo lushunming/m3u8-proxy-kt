@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Good Thymes Virtual Grocery</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+
+</head>
+
+<body>
+
+<div class="layui-form">
+
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">代理</label>
+        <div class="layui-input-inline layui-input-wrap">
+            <input type="text" name="proxy" lay-verify="required" autocomplete="off" lay-affix="clear" id="proxy"
+                   placeholder="http://127.0.0.1:1080"
+                   class="layui-input" th:value="${proxy}">
+        </div>
+    </div>
+    <div class="layui-form-item" pane>
+        <label class="layui-form-label">代理开关</label>
+        <div class="layui-input-block">
+            <input type="checkbox" name="open" title="开启|关闭" lay-skin="switch">
+            <br>
+
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <div class="layui-input-block">
+            <button type="submit" class="layui-btn" lay-submit lay-filter="demo1" onclick="save()">立即提交</button>
+
+        </div>
+    </div>
+</div>
+
+
+<script src="/static/jquery.min.js"></script>
+<script src="/static/layui/layui.js"></script>
+
+<script>
+
+    var form;
+    var layer;
+
+    function save() {
+        var proxy = $("#proxy").val();
+        var open = $("input[name='open']:checked").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/config",
+            contentType: "application/json;charset=utf-8",
+            data: JSON.stringify({
+                proxy: proxy,
+                open: open
+            }),
+            success: function (data) {
+                if (data) {
+                    layer.msg(data, {icon: 1});
+                } else {
+                    layer.msg(data, {icon: 2});
+                }
+            }
+        });
+    }
+
+    layui.use( function () {
+        form = layui.form;
+        layer = layui.layer;
+        form.render();
+
+
+    });
+</script>
+
+</body>
+
+</html>
