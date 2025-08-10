@@ -51,7 +51,10 @@ fun Application.configureRouting() {
             val task = taskService.getTaskById(Integer.parseInt(id!!))
             call.respond(
                 ThymeleafContent(
-                    "video", mapOf("url" to (task?.url ?: ""), "type" to (task?.type ?: "application/x-mpegURL"))
+                    "video", mapOf(
+                        "url" to (task?.url ?: ""),
+                        "type" to (task?.type ?: "application/x-mpegURL")
+                    )
                 )
             )
         }
@@ -92,7 +95,8 @@ fun Application.configureRouting() {
         post("/download") {
 
             val download = call.receive<Downloads>()
-            val url = ProxyServer().buildProxyUrl(download.list[0].url, download.list[0].headers, port)
+            val url =
+                ProxyServer().buildProxyUrl(download.list[0].url, download.list[0].headers, port)
             var type = ContentType.Video.MP4.toString()
             //M3U8开始下载
             if (download.list[0].url.contains("m3u8")) {
@@ -136,7 +140,7 @@ fun Application.configureRouting() {
             val config = configService.getConfig()
             call.respond(
                 ThymeleafContent(
-                    "config", mapOf("proxy" to config?.proxy)
+                    "config", mapOf("proxy" to config?.proxy, "open" to config?.open)
                 )
             )
         }
