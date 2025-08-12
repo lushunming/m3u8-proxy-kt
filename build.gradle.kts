@@ -44,6 +44,7 @@ dependencies {
     implementation("io.ktor:ktor-client-core")
     implementation("io.ktor:ktor-client-okhttp")
     implementation("io.ktor:ktor-client-okhttp-jvm:3.2.2")
+    implementation("io.ktor:ktor-client-logging")
     //db
     implementation("org.jetbrains.exposed:exposed-core:1.0.0-beta-5")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.0.0-beta-5")

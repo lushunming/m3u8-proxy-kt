@@ -1,9 +1,18 @@
+package cn.com.lushunming.server
+
+import cn.com.lushunming.model.DownloadStatus
+import cn.com.lushunming.service.TaskService
 import cn.com.lushunming.util.HttpClientUtil
 import cn.com.lushunming.util.Util
 import io.ktor.client.statement.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flow
+import org.slf4j.LoggerFactory
 import java.io.File
-import kotlin.math.min
+
+val logger = LoggerFactory.getLogger(M3U8Downloader::class.java)
 
 
 class M3U8Downloader(private val outputDir: String) {
@@ -16,6 +25,7 @@ class M3U8Downloader(private val outputDir: String) {
 
         val lines = content.lines()
         val tsUrls = mutableListOf<String>()
+        val infoLines = mutableListOf<String>()
         var keyUrl: String? = null
         var iv: String? = null
 
@@ -33,6 +43,10 @@ class M3U8Downloader(private val outputDir: String) {
                     }
                 }
 
+                line.startsWith("#EXTINF") -> {
+                    infoLines.add(line)
+                }
+
                 !line.startsWith("#") && line.isNotBlank() -> {
                     // 处理TS文件URL
                     tsUrls.add(if (line.startsWith("http")) line else resolveRelativeUrl(m3u8Url, line))
@@ -40,7 +54,7 @@ class M3U8Downloader(private val outputDir: String) {
             }
         }
 
-        return M3U8Info(tsUrls, keyUrl?.let { resolveRelativeUrl(m3u8Url, it) }, iv, m3u8Url)
+        return M3U8Info(infoLines, tsUrls, keyUrl?.let { resolveRelativeUrl(m3u8Url, it) }, iv, m3u8Url)
     }
 
     private fun resolveRelativeUrl(baseUrl: String, relativePath: String): String {
@@ -71,7 +85,7 @@ class M3U8Downloader(private val outputDir: String) {
             val keyFile = File(dir, "key.key")
             downloadFile(keyUrl, headers, keyFile)
         }
-        println("下载密钥文件完成")
+        logger.info("下载密钥文件完成")
 
         // 生成本地M3U8文件
         generateLocalM3U8(m3u8Info, dir)
@@ -81,30 +95,66 @@ class M3U8Downloader(private val outputDir: String) {
              val tsFile = File(dir, "segment${index + 1}.ts")
              downloadFile(tsUrl, tsFile)
          }*/
-        download(m3u8Info.tsUrls, headers, dir) { downloaded, total ->
-            println("已下载 ${downloaded} / ${total} 个TS文件")
+
+        val taskService = TaskService()
+        download(m3u8Info.tsUrls, headers, dir).collect { it ->
+            when (it) {
+                is DownloadStatus.Progress -> {
+                    logger.info("已下载 ${it.value} %")
+                    CoroutineScope(Dispatchers.IO).launch {
+                        taskService.updateProgress(Util.md5(m3u8Info.url), it.value, 100)
+                    }
+                }
+
+                is DownloadStatus.Done -> {
+                    logger.info("下载完成")
+                    CoroutineScope(Dispatchers.IO).launch {
+                        taskService.updateProgress(Util.md5(m3u8Info.url), 100, 100)
+                    }
+                }
+
+                is DownloadStatus.Error -> {
+                    logger.info("下载失败: ${it.throwable.message}")
+                }
+
+                is DownloadStatus.None -> {
+                    logger.info("下载还未开始")
+                }
+
+            }
         }
+
+
     }
 
     private val batchSize: Int = Runtime.getRuntime().availableProcessors() * 2
     private val maxRetries: Int = 3
 
     suspend fun download(
-        tsUrls: List<String>, headers: Map<String, String>, dir: File, onProgress: (Int, Int) -> Unit = { _, _ -> }
-    ) {
-        val batches = tsUrls.chunked(batchSize)
-        val total = tsUrls.size
+        tsUrls: List<String>, headers: Map<String, String>, dir: File
+    ): Flow<DownloadStatus> {
+        return flow {
 
-        batches.forEachIndexed { batchIndex, batch ->
+            emit(DownloadStatus.Progress(0))
+            val batches = tsUrls.chunked(batchSize)
+            val total = tsUrls.size
 
-            val deferredList = batch.mapIndexed { innerIndex, url ->
-                CoroutineScope(Dispatchers.IO).async {
-                    val globalIndex = batchIndex * batchSize + innerIndex + 1
-                    downloadWithRetry(url, headers, globalIndex, dir)
+            batches.forEachIndexed { batchIndex, batch ->
+
+                val deferredList = batch.mapIndexed { innerIndex, url ->
+                    CoroutineScope(Dispatchers.IO).async {
+                        val globalIndex = batchIndex * batchSize + innerIndex + 1
+                        downloadWithRetry(url, headers, globalIndex, dir)
+                    }
                 }
+                deferredList.awaitAll()
+                // onProgress(min((batchIndex) * batchSize + batch.size, total), total)
+                emit(DownloadStatus.Progress((batchIndex* batchSize + batch.size)* 100 / total .floorDiv(1)))
             }
-            deferredList.awaitAll()
-            onProgress(min((batchIndex + 1) * batchSize, total), total)
+            emit(DownloadStatus.Done(dir))
+        }.catch {
+            logger.info("下载失败: ${it.message}")
+            emit(DownloadStatus.Error(it))
         }
     }
 
@@ -116,7 +166,7 @@ class M3U8Downloader(private val outputDir: String) {
             try {
                 val file = File(dir, "segment$index.ts")
                 if (file.exists()) {
-                    println("TS文件 segment$index.ts 已存在")
+                    logger.info("TS文件 segment$index.ts 已存在")
                     success = true
                     continue
                 }
@@ -128,7 +178,9 @@ class M3U8Downloader(private val outputDir: String) {
             } catch (e: Exception) {
                 retryCount++
                 if (retryCount == maxRetries) {
-                    println("TS文件 $index 下载失败: ${e.message}")
+
+                    logger.info("TS文件 $index 下载失败: ${e.message}")
+                    throw e
                 }
 
                 delay(1000L * retryCount)
@@ -154,7 +206,7 @@ private fun generateLocalM3U8(m3u8Info: M3U8Info, dir: File) {
         }
 
         m3u8Info.tsUrls.forEachIndexed { index, _ ->
-            appendLine("#EXTINF:10.0,")
+            appendLine(m3u8Info.infoLines[index])
             appendLine("/ts/${Util.md5(m3u8Info.url)}/segment${index + 1}.ts")
         }
 
@@ -166,8 +218,9 @@ private fun generateLocalM3U8(m3u8Info: M3U8Info, dir: File) {
 
 
 data class M3U8Info(
-    val tsUrls: List<String>, val keyUrl: String?, val iv: String?, val url: String
+    val infoLines: List<String>, val tsUrls: List<String>, val keyUrl: String?, val iv: String?, val url: String
 )
+
 
 suspend fun startDownload(outputDir: String, m3u8Url: String, headers: Map<String, String>) {
 
@@ -178,20 +231,21 @@ suspend fun startDownload(outputDir: String, m3u8Url: String, headers: Map<Strin
     try {
         // 解析M3U8
         val m3u8Info = downloader.parseM3U8(m3u8Url, headers)
-        println("解析完成，找到${m3u8Info.tsUrls.size}个TS片段")
+        logger.info("解析完成，找到${m3u8Info.tsUrls.size}个TS片段")
 
         // 下载所有文件
         downloader.downloadAllFiles(m3u8Info, headers)
-        println("文件下载完成")
+        logger.info("文件下载完成")
 
 
 
-        println("所有操作完成！本地M3U8文件位于：${File(outputDir).absolutePath}/local.m3u8")
+        logger.info("所有操作完成！本地M3U8文件位于：${File(outputDir).absolutePath}/local.m3u8")
     } catch (e: Exception) {
-        println("发生错误: ${e.message}")
+        logger.info("发生错误: ${e.message}")
         e.printStackTrace()
     }
 }
+
 
 fun main() = runBlocking {
     val outputDir = "downloads"
@@ -203,17 +257,17 @@ fun main() = runBlocking {
     try {
         // 解析M3U8
         val m3u8Info = downloader.parseM3U8(m3u8Url, headers)
-        println("解析完成，找到${m3u8Info.tsUrls.size}个TS片段")
+        logger.info("解析完成，找到${m3u8Info.tsUrls.size}个TS片段")
 
         // 下载所有文件
         downloader.downloadAllFiles(m3u8Info, headers)
-        println("文件下载完成")
+        logger.info("文件下载完成")
 
 
 
-        println("所有操作完成！本地M3U8文件位于：${File(outputDir).absolutePath}/local.m3u8")
+        logger.info("所有操作完成！本地M3U8文件位于：${File(outputDir).absolutePath}/local.m3u8")
     } catch (e: Exception) {
-        println("发生错误: ${e.message}")
+        logger.info("发生错误: ${e.message}")
         e.printStackTrace()
     }
 }

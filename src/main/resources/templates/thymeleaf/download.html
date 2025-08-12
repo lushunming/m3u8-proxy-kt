@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>下载</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <link rel="stylesheet" href="/static/layui/css/layui.css">
+
+</head>
+
+<body>
+
+<div class="layui-row">
+    <div class="layui-col-xs12">
+        <table class="layui-hide" id="ID-table-demo-data" lay-filter="test"></table>
+    </div>
+</div>
+
+
+<script type="text/html" id="barDemo">
+    <div class="layui-clear-space">
+        <a class="layui-btn layui-btn-xs" lay-event="play">播放</a>
+        <a class="layui-btn layui-btn-xs" lay-event="download">开始下载</a>
+        <a class="layui-btn layui-btn-xs" lay-event="delete">删除</a>
+
+    </div>
+</script>
+<script type="text/html" id="progress">
+    <div class="layui-progress layui-progress-big" lay-showpercent="true" lay-filter="filter-progress">
+        <div class="layui-progress-bar" lay-percent="{{= d.downloaded}}%"></div>
+
+    </div>
+</script>
+<script src="/static/layui/layui.js"></script>
+
+<script>
+    const serverURL = 'ws://127.0.0.1:3800/tasks';
+    const socket = new WebSocket(serverURL);
+
+
+    layui.use(function () {
+        var table = layui.table;
+        var layer = layui.layer;
+        var element = layui.element;
+        var $ = layui.jquery;
+        socket.onopen = logOpenToConsole;
+        socket.onclose = logCloseToConsole;
+        socket.onmessage = readAndDisplayTask;
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            layer.msg('WebSocket 出错: ' + error);
+        };
+        // 已知数据渲染
+        var inst = table.render({
+            id: 'ID-table-demo-data',
+            elem: '#ID-table-demo-data',
+            cols: [
+                [
+                    {title: '序号', type: "numbers", width: '5%'},
+                    {field: 'name', title: '视频名称', width: '60%'},
+                    {title: '进度', width: '10%', templet: '#progress'},
+
+                    {title: '操作', toolbar: '#barDemo', width: '25%'}
+                ]
+            ],
+            data: [],
+            //skin: 'line', // 表格风格
+            //even: true,
+            page: false, // 是否显示分页
+            /* limits: [5, 10, 15],
+             limit: 5 // 每页默认显示的数量*/
+        });
+
+        table.on('tool(test)', function (obj) {
+            var data = obj.data;
+            //console.log(obj)
+            if (obj.event === 'play') {
+
+                console.log(data);
+                // window.open("/video/" + data.id, '_blank');
+                layer.open({
+                    type: 2,
+                    area: ['680px', '520px'],
+                    content: "/video/" + data.id,
+                    fixed: false, // 不固定
+                    maxmin: true,
+                    shadeClose: true,
+
+                });
+            } else if (obj.event === 'download') {
+
+                console.log(data);
+                // window.open("/video/" + data.id, '_blank');
+                $.ajax({
+                    type: 'GET',
+                    url: '/download/' + data.id, //请求的url
+
+                    success: function (resp) {
+                        layer.msg(resp);
+                    },
+                    error: function () {
+                    }
+                });
+            } else if (obj.event === 'delete') {
+
+                console.log(data);
+                // window.open("/video/" + data.id, '_blank');
+                $.ajax({
+                    type: 'post',
+                    url: '/delete/' + data.id, //请求的url
+
+                    success: function (resp) {
+                        layer.msg(resp);
+                    },
+                    error: function () {
+                    }
+                });
+            }
+        });
+
+        function readAndDisplayTask(event) {
+            //  clearTable();
+            let task = JSON.parse(event.data);
+            logTaskToConsole(task);
+            // addTaskToTable(task);
+
+            table.reloadData('ID-table-demo-data', {
+                data: task
+            });
+            element.render('progress', 'filter-progress');
+
+        }
+
+        function logTaskToConsole(task) {
+            console.log(`Received ` + JSON.stringify(task));
+            //layer.msg(`Received ` + JSON.stringify(task));
+        }
+
+        function logCloseToConsole(event) {
+            console.log("Web socket connection closed" + event.reason);
+            layer.msg("Websocket关闭 " + event.reason);
+        }
+
+        function logOpenToConsole() {
+            console.log("Web socket connection opened");
+            layer.msg("Websocket连接成功");
+        }
+
+
+    });
+</script>
+
+</body>
+
+</html>

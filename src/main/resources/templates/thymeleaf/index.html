@@ -8,169 +8,71 @@
     <link rel="stylesheet" href="/static/layui/css/layui.css">
 
 </head>
+<style>
+    .frame {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+    }
+</style>
 
 <body>
 
 <div class="layui-layout layui-layout-admin">
-
+    <div class="layui-header">
+        <div class="layui-logo layui-hide-xs layui-bg-black">下载器</div>
+    </div>
     <div class="layui-side layui-bg-black">
         <div class="layui-side-scroll">
             <!-- 左侧导航区域（可配合layui已有的垂直导航） -->
             <ul class="layui-nav layui-nav-tree" lay-filter="test">
-                <li class="layui-nav-item layui-nav-itemed">
-                    <a class="" href="javascript:;">menu group 1</a>
-                    <dl class="layui-nav-child">
-                        <dd><a href="javascript:;">menu 1</a></dd>
-                        <dd><a href="javascript:;">menu 2</a></dd>
-                        <dd><a href="javascript:;">menu 3</a></dd>
-                        <dd><a href="javascript:;">the links</a></dd>
-                    </dl>
-                </li>
-                <li class="layui-nav-item">
-                    <a href="javascript:;">menu group 2</a>
-                    <dl class="layui-nav-child">
-                        <dd><a href="javascript:;">list 1</a></dd>
-                        <dd><a href="javascript:;">list 2</a></dd>
-                        <dd><a href="javascript:;">超链接</a></dd>
-                    </dl>
-                </li>
-                <li class="layui-nav-item"><a href="javascript:;">click menu item</a></li>
-                <li class="layui-nav-item"><a href="javascript:;">the links</a></li>
+
+                <li class="layui-nav-item"><a href="javascript:;" onclick="setIframe('/download')">下载</a></li>
+                <li class="layui-nav-item"><a href="javascript:;" onclick="setIframe('/config')">配置</a></li>
             </ul>
         </div>
     </div>
     <div class="layui-body">
+        <iframe id="my-iframe" class="frame" src="/download"></iframe>
 
-        <table class="layui-hide" id="ID-table-demo-data" lay-filter="test"></table>
 
     </div>
 
 
 </div>
 
-<script type="text/html" id="barDemo">
-    <div class="layui-clear-space">
-        <a class="layui-btn layui-btn-xs" lay-event="play">播放</a>
 
-    </div>
-</script>
 <script src="/static/layui/layui.js"></script>
 
 <script>
-    const serverURL = 'ws://127.0.0.1:3800/tasks';
-    const socket = new WebSocket(serverURL);
-
-
+    var $ = ""
     layui.use(function () {
-        var table = layui.table;
-        var layer = layui.layer;
-        socket.onopen = logOpenToConsole;
-        socket.onclose = logCloseToConsole;
-        socket.onmessage = readAndDisplayTask;
-        socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
-        // 已知数据渲染
-        var inst = table.render({
-            id: 'ID-table-demo-data',
-            elem: '#ID-table-demo-data',
-            cols: [
-                [
-                    {field: 'id', title: 'ID', width: '5%'},
-                    {field: 'name', title: '视频名称', width: '70%'},
 
-                    {title: '操作', toolbar: '#barDemo', width: '25%'}
-                ]
-            ],
-            data: [],
-            //skin: 'line', // 表格风格
-            //even: true,
-            page: false, // 是否显示分页
-            /* limits: [5, 10, 15],
-             limit: 5 // 每页默认显示的数量*/
-        });
-
-        table.on('tool(test)', function (obj) {
-            var data = obj.data;
-            //console.log(obj)
-            if (obj.event === 'play') {
-
-                console.log(data);
-                // window.open("/video/" + data.id, '_blank');
-                layer.open({
-                    type: 2,
-                    area: ['680px', '520px'],
-                    content: "/video/" + data.id,
-                    fixed: false, // 不固定
-                    maxmin: true,
-                    shadeClose: true,
-
-                });
-            }
-        });
-
-        function readAndDisplayTask(event) {
-            //  clearTable();
-            let task = JSON.parse(event.data);
-            logTaskToConsole(task);
-            // addTaskToTable(task);
-
-            table.reloadData('ID-table-demo-data', {
-                data: task
-            });
-
-        }
-
-        function logTaskToConsole(task) {
-            console.log(`Received ` + JSON.stringify(task));
-        }
-
-        function logCloseToConsole(event) {
-            console.log("Web socket connection closed" + event.reason);
-        }
-
-        function logOpenToConsole() {
-            console.log("Web socket connection opened");
-        }
-
-        function tableBody() {
-            return document.getElementById("tasksTableBody");
-        }
-
-        function clearTable() {
-            tableBody().innerHTML = "";
-        }
-
-        function addTaskToTable(tasks) {
-            tasks.forEach(task =>
-                tableBody().appendChild(taskRow(task))
-            );
-        }
+        $ = layui.jquery
 
 
-        function taskRow(task) {
-
-            return tr([
-                td(task.name),
-                td(task.url),
-
-            ])
-        }
-
-
-        function tr(children) {
-            const node = document.createElement("tr");
-            children.forEach(child => node.appendChild(child));
-            return node;
-        }
-
-
-        function td(text) {
-            const node = document.createElement("td");
-            node.appendChild(document.createTextNode(text));
-            return node;
-        }
     });
+
+    function autoFrameSize(iframe) {
+        var _width = $("#" + iframe).contents().find("body")[0].scrollWidth;
+        var _height = $("#" + iframe).contents().find("body")[0].scrollHeight;
+        $("#" + iframe).height(_height);
+        $("#" + iframe).width(_width);
+    }
+
+    function setIframe(src) {
+        // 选择 id 为 "my-iframe" 的 iframe 元素
+        var iframe = $('#my-iframe');
+
+// 设置 src 属性为新的 URL
+        iframe.prop('src', src);
+    }
+
+
 </script>
 
 </body>
