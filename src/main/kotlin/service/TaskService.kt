@@ -3,6 +3,8 @@ package cn.com.lushunming.service
 import model.Task
 import model.Tasks
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.statements.UpsertSqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -55,4 +57,12 @@ class TaskService {
         total = row[Tasks.total],
         oriUrl = row[Tasks.oriUrl],
     )
+
+    suspend fun deleteTask(id: String?) {
+        id ?: return
+        return DatabaseFactory.dbQuery {
+            Tasks.deleteWhere { Tasks.id eq id }
+        }
+
+    }
 }

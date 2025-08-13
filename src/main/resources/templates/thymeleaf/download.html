@@ -23,6 +23,7 @@
         <a class="layui-btn layui-btn-xs" lay-event="play">播放</a>
         <a class="layui-btn layui-btn-xs" lay-event="download">开始下载</a>
         <a class="layui-btn layui-btn-xs" lay-event="delete">删除</a>
+        <a class="layui-btn layui-btn-xs" lay-event="stop">暂停</a>
 
     </div>
 </script>
@@ -35,22 +36,116 @@
 <script src="/static/layui/layui.js"></script>
 
 <script>
-    const serverURL = 'ws://127.0.0.1:3800/tasks';
-    const socket = new WebSocket(serverURL);
+    class WSocket {
+        constructor({url, onMessage, onDisconnect}) {
+            this.url = url;
+            this.onMessage = onMessage;
+            this.onDisconnect = onDisconnect;
+            this.ws = null;
+            this.heartbeatTimer = null;
+            this.statusCheckTimer = null;
+            this.reconnecting = false;
+            this.reconnectCount = 0;
+        }
+
+        connect() {
+            this.ws = new WebSocket(this.url);
+            this.ws.binaryType = 'arraybuffer';
+            this.ws.onopen = () => this.handleOpen();
+            this.ws.onmessage = e => this.handleMessage(e);
+            this.ws.onclose = e => this.handleClose(e);
+            this.ws.onerror = e => this.handleError(e);
+        }
+
+        handleOpen() {
+            this.reconnectCount = 0;
+            this.clearTimers();
+            this.startHeartbeat();
+            console.log('WebSocket connected');
+        }
+
+        startHeartbeat() {
+            this.heartbeatTimer = setInterval(() => {
+                if (this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send('PING');
+                }
+            }, 5000);
+
+            this.statusCheckTimer = setInterval(() => {
+                if (this.ws.readyState !== WebSocket.OPEN) this.reconnect();
+            }, 5000);
+        }
+
+        clearTimers() {
+            clearInterval(this.heartbeatTimer);
+            clearInterval(this.statusCheckTimer);
+        }
+
+        reconnect() {
+            if (this.reconnecting) return;
+            this.reconnecting = true;
+            this.clearTimers();
+            setTimeout(() => {
+                this.reconnectCount++;
+                if (this.reconnectCount <= 5) {
+                    this.connect();
+                } else {
+                    this.onDisconnect();
+                }
+                this.reconnecting = false;
+            }, 2000);
+        }
+
+        handleMessage(event) {
+            try {
+
+                this.onMessage(event);
+            } catch (err) {
+                console.error('Message parse error:', err);
+            }
+        }
+
+        handleClose(e) {
+            console.warn('WebSocket closed:', e);
+            this.reconnect();
+        }
+
+        handleError(e) {
+            console.error('WebSocket error:', e);
+            this.reconnect();
+        }
+
+        send(data) {
+            if (this.ws?.readyState === WebSocket.OPEN) {
+                this.ws.send(typeof data === 'string' ? data : JSON.stringify(data));
+            }
+        }
+
+        disconnect() {
+            this.clearTimers();
+            this.ws?.close();
+        }
+    }
 
 
+    let ws;
+    let serverURL = "ws://127.0.0.1:3800/tasks";
     layui.use(function () {
         var table = layui.table;
         var layer = layui.layer;
         var element = layui.element;
         var $ = layui.jquery;
-        socket.onopen = logOpenToConsole;
-        socket.onclose = logCloseToConsole;
-        socket.onmessage = readAndDisplayTask;
-        socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            layer.msg('WebSocket 出错: ' + error);
-        };
+
+
+        ws = new WSocket({
+            url: serverURL,
+            onMessage: msg => readAndDisplayTask(msg),
+            onDisconnect: () => logCloseToConsole
+        });
+
+        ws.connect();
+
+
         // 已知数据渲染
         var inst = table.render({
             id: 'ID-table-demo-data',
@@ -58,8 +153,8 @@
             cols: [
                 [
                     {title: '序号', type: "numbers", width: '5%'},
-                    {field: 'name', title: '视频名称', width: '60%'},
-                    {title: '进度', width: '10%', templet: '#progress'},
+                    {field: 'name', title: '视频名称', width: '40%'},
+                    {title: '进度', width: '30%', templet: '#progress'},
 
                     {title: '操作', toolbar: '#barDemo', width: '25%'}
                 ]
@@ -81,7 +176,7 @@
                 // window.open("/video/" + data.id, '_blank');
                 layer.open({
                     type: 2,
-                    area: ['680px', '520px'],
+                    area: ['680px', '600px'],
                     content: "/video/" + data.id,
                     fixed: false, // 不固定
                     maxmin: true,
@@ -116,12 +211,30 @@
                     error: function () {
                     }
                 });
+            } else if (obj.event === 'stop') {
+
+                console.log(data);
+                // window.open("/video/" + data.id, '_blank');
+                $.ajax({
+                    type: 'post',
+                    url: '/stop/' + data.id, //请求的url
+
+                    success: function (resp) {
+                        layer.msg(resp);
+                    },
+                    error: function () {
+                    }
+                });
             }
         });
 
         function readAndDisplayTask(event) {
             //  clearTable();
+            if (event.data === "pong") {
+                return
+            }
             let task = JSON.parse(event.data);
+
             logTaskToConsole(task);
             // addTaskToTable(task);
 

@@ -32,18 +32,18 @@ fun Application.configureRouting() {
     val logger = LoggerFactory.getLogger(Application::class.java)
     val taskService = TaskService()
     var sessions = Collections.synchronizedList<WebSocketServerSession>(ArrayList())
+    val jobMap = mutableMapOf<String, Job>();
 
-
-
-
-    CoroutineScope(Dispatchers.IO).launch {
-        while (isActive) {  // 检查协程是否还活跃
-            delay(5000L)  // 等待指定的时间间隔
-            sessions.forEach {
-                it.sendSerialized(taskService.getTaskList())
-            }               // 执行传入的代码块
-        }
-    }
+    /*
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        scope.launch {
+            while (isActive) {  // 检查协程是否还活跃
+                delay(5000L)  // 等待指定的时间间隔
+                sessions.forEach {
+                    it.sendSerialized(taskService.getTaskList())
+                }               // 执行传入的代码块
+            }
+        }*/
 
 
 
@@ -115,6 +115,22 @@ fun Application.configureRouting() {
                 )
             )
         }
+        post("/stop/{id}") {
+            val id = call.parameters["id"]
+            val job = jobMap[id]
+            job?.cancel()
+            call.respondText("暂停成功")
+        }
+
+        post("/delete/{id}") {
+            val id = call.parameters["id"]
+            val job = jobMap[id]
+            job?.cancel()
+            taskService.deleteTask(id)
+            val dir = Constant.downloadPath + File.separator + id
+            File(dir).deleteRecursively()
+            call.respondText("删除成功")
+        }
 
         get("/download/{id}") {
 
@@ -125,11 +141,13 @@ fun Application.configureRouting() {
                 call.respondText("不存在")
                 return@get
             }
-
+            if (jobMap[id] != null) {
+                call.respondText("已经在下载")
+            }
             if (old.oriUrl.contains("m3u8")) {
 
                 val dir = Constant.downloadPath + File.separator + id
-                CoroutineScope(Dispatchers.IO).launch {
+                val job = CoroutineScope(Dispatchers.IO).launch {
                     File(dir).mkdirs()
                     val headerFile = File(dir, "header.tmp")
                     val headerParam = Gson().fromJson<MutableMap<String, String>>(
@@ -139,6 +157,7 @@ fun Application.configureRouting() {
                         dir, old.oriUrl, headerParam
                     )
                 }
+                jobMap[id] = job
             }
             call.respondText("开始下载")
 
@@ -163,7 +182,7 @@ fun Application.configureRouting() {
             if (urlParam.contains("m3u8")) {
                 type = "application/x-mpegURL"
                 val dir = Constant.downloadPath + File.separator + Util.md5(urlParam)
-                CoroutineScope(Dispatchers.IO).launch {
+                val job = CoroutineScope(Dispatchers.IO).launch {
                     File(dir).mkdirs()
                     val headerFile = File(dir, "header.tmp")
                     headerFile.writeText(Util.json(headerParam))
@@ -171,6 +190,7 @@ fun Application.configureRouting() {
                         dir, urlParam, headerParam
                     )
                 }
+                jobMap[id] = job
             }
             taskService.addTask(Task(id, download.list[0].filename, url, urlParam, type, 0, 0))
             sessions = sessions.filter { it.isActive }.toMutableList()
@@ -204,8 +224,6 @@ fun Application.configureRouting() {
             )
         }
 
-
-
         webSocket("/tasks") {
             sessions.add(this)
             sendSerialized(taskService.getTaskList())
@@ -213,14 +231,16 @@ fun Application.configureRouting() {
 
             while (true) { // <-------------------------- notice the loop here
                 val frame = incoming.receive()
-                println("connect")
+                // logger.info("connect")
                 if (frame is Frame.Text) {
                     val msg = frame.readText()
-                    println(msg)
-                    outgoing.send(Frame.Text("Server: ${msg}"))
-                    // ...
+                    //  logger.info("msg: $msg")
+                    if (msg == "PING") {
+                        outgoing.send(Frame.Text("pong"))
+                        sendSerialized(taskService.getTaskList())
+                    }
                 } else {
-                    println(1)
+                    logger.info("")
                 }
             }
 
