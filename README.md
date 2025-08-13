@@ -1,13 +1,24 @@
 # m3u8-proxy-kt
 
-This project was created using the [Ktor Project Generator](https://start.ktor.io).
 
-Here are some useful links to get you started:
+实现视频边下边播，支持m3u8和mp4（其他照道理支持content-range的都支持）
 
-- [Ktor Documentation](https://ktor.io/docs/home.html)
-- [Ktor GitHub page](https://github.com/ktorio/ktor)
-- The [Ktor Slack chat](https://app.slack.com/client/T09229ZC6/C0A974TJ9). You'll need
-  to [request an invite](https://surveys.jetbrains.com/s3/kotlin-slack-sign-up) to join.
+# 实现原理
+Mp4：利用在线播放支持Content-range,代理服务器多协程下载，每个协程下载1M，不断往后下载，顺序返回实现流畅播放（比如某些限速网盘）
+m3u8:下载M3u8文件，构建本地M3u8文件，返回给播放器，使播放器走代理服务器获取本地下载的TS文件片段。后台下载协程按照顺序多协程下载文件（适合某些总卡顿的网站）
+
+# 用法
+下载压缩包解压，点击bin文件夹启动脚本启动，出现本地地址直接浏览器访问
+配合`https://github.com/lushunming/m3u8-dl-sniffer` 浏览器插件，可以直接获取视频地址，一键发送到本服务中
+
+
+
+# 截图
+![img.png](img.png)
+![img_1.png](img_1.png)
+![img_2.png](img_2.png)
+![img_3.png](img_3.png)
+
 
 ## Features
 
@@ -42,4 +53,3 @@ If the server starts successfully, you'll see the following output:
 2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
 2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
 ```
-
