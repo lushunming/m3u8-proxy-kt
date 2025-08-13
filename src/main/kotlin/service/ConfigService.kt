@@ -25,11 +25,13 @@ class ConfigService {
                 Config.insert {
                     it[Config.proxy] = config.proxy
                     it[Config.open] = config.open
+                    it[Config.downloadPath] = config.downloadPath
                 }
             } else {
                 Config.update({ Config.id eq old.id!! }) {
                     it[Config.proxy] = config.proxy
                     it[Config.open] = config.open
+                    it[Config.downloadPath] = config.downloadPath
                 }
 
             }
@@ -37,6 +39,7 @@ class ConfigService {
     }
 
     private fun toAppConfig(row: ResultRow): AppConfig = AppConfig(
+        downloadPath = row[Config.downloadPath],
         proxy = row[Config.proxy],
         open = row[Config.open],
         id = row[Config.id],

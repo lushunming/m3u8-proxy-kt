@@ -32,6 +32,15 @@
 
         </div>
     </div>
+    <div class="layui-form-item">
+        <label class="layui-form-label">下载路径</label>
+        <div class="layui-input-inline layui-input-wrap">
+            <input type="text" name="downloadPath" lay-verify="required" autocomplete="off"
+                   lay-affix="clear" id="downloadPath"
+
+                   class="layui-input" th:value="${downloadPath}">
+        </div>
+    </div>
 
     <div class="layui-form-item">
         <div class="layui-input-block">
@@ -49,6 +58,7 @@
 <script type="text/javascript" th:inline="javascript">
     let open = [[${open}]]
     let proxy = [[${proxy}]]
+    let downloadPath = [[${downloadPath}]]
 </script>
 
 <script>
@@ -61,7 +71,8 @@
 
     form.val('proxy-form-filter', {
       "proxy": proxy,
-      "open": open==1?true:false
+      "open": open==1?true:false,
+      "downloadPath": downloadPath
     });
 
     $("#save").click(save)

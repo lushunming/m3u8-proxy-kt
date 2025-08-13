@@ -33,6 +33,7 @@ fun Application.configureRouting() {
     val taskService = TaskService()
     var sessions = Collections.synchronizedList<WebSocketServerSession>(ArrayList())
     val jobMap = mutableMapOf<String, Job>();
+    val configService = ConfigService()
 
     /*
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -74,14 +75,15 @@ fun Application.configureRouting() {
 
         get("/proxy") {
             logger.info("代理中: ${call.parameters["url"]}")
-
+            val path = configService.getConfig()?.downloadPath ?: Constant.downloadPath
 
             val url = Util.base64Decode(call.parameters["url"]!!)
             val header: Map<String, String> = Gson().fromJson<Map<String, String>>(
                 Util.base64Decode(call.parameters["headers"]!!), MutableMap::class.java
             )
             if (url.contains("m3u8")) {
-                M3u8ProxyServer().proxyAsyncM3u8(url, header, call)
+                val dir= path + File.separator + Util.md5(url)
+                M3u8ProxyServer().proxyAsyncM3u8(url, header,dir, call)
             } else {
                 ProxyServer().proxyAsync(
                     url, header, call
@@ -97,7 +99,7 @@ fun Application.configureRouting() {
         get("/ts/{path}/{tsName}") {
             logger.info("路径: ${call.parameters["path"]}")
             logger.info("tsName: ${call.parameters["tsName"]}")
-
+            val path = configService.getConfig()?.downloadPath ?: Constant.downloadPath
 
             val url = call.parameters["path"] ?: ""
             val tsName = call.parameters["tsName"] ?: ""
@@ -105,7 +107,7 @@ fun Application.configureRouting() {
             call.response.header(
                 HttpHeaders.ContentType, "video/mp2t"
             )
-            call.respondFile(File(Constant.downloadPath + File.separator + url + File.separator + tsName))
+            call.respondFile(File(path + File.separator + url + File.separator + tsName))
 
         }
         get("/download") {
@@ -127,14 +129,15 @@ fun Application.configureRouting() {
             val job = jobMap[id]
             job?.cancel()
             taskService.deleteTask(id)
-            val dir = Constant.downloadPath + File.separator + id
+            val path = configService.getConfig()?.downloadPath ?: Constant.downloadPath
+            val dir = path + File.separator + id
             File(dir).deleteRecursively()
             call.respondText("删除成功")
         }
 
         get("/download/{id}") {
 
-
+            val path = configService.getConfig()?.downloadPath ?: Constant.downloadPath
             val id = call.parameters["id"] ?: ""
             val old = taskService.getTaskById(id)
             if (old == null) {
@@ -146,7 +149,7 @@ fun Application.configureRouting() {
             }
             if (old.oriUrl.contains("m3u8")) {
 
-                val dir = Constant.downloadPath + File.separator + id
+                val dir = path + File.separator + id
                 val job = CoroutineScope(Dispatchers.IO).launch {
                     File(dir).mkdirs()
                     val headerFile = File(dir, "header.tmp")
@@ -166,7 +169,7 @@ fun Application.configureRouting() {
          * 提交下载
          */
         post("/download") {
-
+            val path = configService.getConfig()?.downloadPath ?: Constant.downloadPath
             val download = call.receive<Downloads>()
             val urlParam = download.list[0].url
             val headerParam = download.list[0].headers
@@ -181,7 +184,7 @@ fun Application.configureRouting() {
             //M3U8开始下载
             if (urlParam.contains("m3u8")) {
                 type = "application/x-mpegURL"
-                val dir = Constant.downloadPath + File.separator + Util.md5(urlParam)
+                val dir = path + File.separator + Util.md5(urlParam)
                 val job = CoroutineScope(Dispatchers.IO).launch {
                     File(dir).mkdirs()
                     val headerFile = File(dir, "header.tmp")
@@ -219,7 +222,11 @@ fun Application.configureRouting() {
             val config = configService.getConfig()
             call.respond(
                 ThymeleafContent(
-                    "config", mapOf("proxy" to config?.proxy, "open" to config?.open)
+                    "config", mapOf(
+                        "proxy" to config?.proxy,
+                        "open" to config?.open,
+                        "downloadPath" to (config?.downloadPath ?: Constant.downloadPath)
+                    )
                 )
             )
         }

@@ -1,7 +1,5 @@
 package cn.com.lushunming.server
 
-import cn.com.lushunming.util.Constant
-import cn.com.lushunming.util.Util
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -14,10 +12,9 @@ class M3u8ProxyServer {
 
 
     suspend fun proxyAsyncM3u8(
-        url: String, headers: Map<String, String>, call: ApplicationCall
+        url: String, headers: Map<String, String>, dir: String, call: ApplicationCall
     ) {
         //所在目录
-        val dir = Constant.downloadPath + File.separator + Util.md5(url)
         try {
 
             call.response.header(
